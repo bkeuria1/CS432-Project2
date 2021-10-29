@@ -13,7 +13,6 @@ BEGIN
 	DECLARE prereq_cursor CURSOR FOR
 	SELECT pre_dc, pre_cn from prerequisites 
 	WHERE dept_code = dc AND course_no = cd;
-
 	OPEN prereq_cursor;
 	Fetch Next from prereq_cursor into @pdc, @pcn;
 	while @@FETCH_STATUS = 0
@@ -24,7 +23,6 @@ BEGIN
 		
 		
 END;
-
 --var n number
 --exec procedure_name(:n)
 --print n
