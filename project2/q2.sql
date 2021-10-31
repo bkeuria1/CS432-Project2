@@ -5,7 +5,21 @@ create or replace sequence s
         INCREMENT BY 1
         NOCACHE;
 
+CREATE or replace trigger drop_student_trigger AFTER
+DELETE on Enrollments
+FOR EACH ROW
+DECLARE 
+	class_id classes.classid%type;
+	CURSOR c1 is select * from classes where classid = :old.classid;
+BEGIN
+	for c1_record in c1 loop
+		c1_record.class_size := c1_record.class_size - 1;
+	END LOOP;
+	
 
+END;
+/
+show errors;
 create or replace package srs as
 procedure show_students(c1 in out sys_refcursor);
 procedure show_courses(c1 in out sys_refcursor);
@@ -17,8 +31,11 @@ procedure show_pre(c1 in out sys_refcursor);
 PROCEDURE insert_student(sid in students.sid%type, firstname in students.firstname%type, lastname in students.lastname%type, status in students.status%type, gpa in students.gpa%type, email in students.email%type);
 
 PROCEDURE get_student_info(p_sid in students.sid%type, c1 out sys_refcursor);
-
+PROCEDURE get_pre(p_dept_code in prerequisites.dept_code%type,p_course_no in prerequisites.course_no%type, c1 out sys_refcursor);  
 PROCEDURE get_class_info(c_id in classes.classid%type, c1 out sys_refcursor);
+
+PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%type);
+
 end;
 /
 show errors;
@@ -106,6 +123,34 @@ PROCEDURE get_class_info(c_id in classes.classid%type, c1 out sys_refcursor) as
 	open c1 for select classid, title, semester, year, sid, firstname, lastname, email from students inner join enrollments using (sid) inner join classes using (classid) inner join courses using(dept_code, course_no) where
 	c_id = classid;
 	
+END;
+
+PROCEDURE get_pre(p_dept_code in prerequisites.dept_code%type,p_course_no in prerequisites.course_no%type, c1 out sys_refcursor) as
+
+	BEGIN
+		open c1 for select pre_dept_code, pre_course_no from prerequisites  CONNECT BY dept_code = PRIOR pre_dept_code and course_no = PRIOR pre_course_no START WITH course_no = p_course_no and 
+		dept_code = p_dept_code;		
+	END;
+
+PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%type) as
+	valid_student number;
+	valid_classid number;
+        valid_enrollment number;	
+	BEGIN
+		select count(*) into valid_student from students where p_sid = sid;
+		select count(*) into valid_classid from classes where p_classid = classid;
+		select count(*) into valid_enrollment from enrollments where p_classid = classid and p_sid = sid;	
+		IF valid_student<1 THEN
+			dbms_output.put_line('sid not found');
+		END IF;
+		
+		IF valid_classid<1 THEN
+			dbms_output.put_line('classid not found');
+		END IF;
+
+		IF valid_enrollment<1 then
+			dbms_output.put_line('student not enrolled in this class');
+		END IF;
 	END;
 
 
