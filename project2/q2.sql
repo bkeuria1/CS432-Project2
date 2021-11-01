@@ -136,21 +136,58 @@ PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%
 	valid_student number;
 	valid_classid number;
         valid_enrollment number;	
+	c_num number;
+	c_dept_code varchar2(4);
+	temp_classid varchar2(10);
+	is_pre number;
+	num_enrollments number;
+	cursor prereq is select pre.dept_code, pre.course_no from prerequisites pre, classes c where p_classid = c.classid and c.dept_code = pre.pre_dept_code and c.course_no = pre.pre_course_no;
 	BEGIN
 		select count(*) into valid_student from students where p_sid = sid;
 		select count(*) into valid_classid from classes where p_classid = classid;
 		select count(*) into valid_enrollment from enrollments where p_classid = classid and p_sid = sid;	
+		
 		IF valid_student<1 THEN
 			dbms_output.put_line('sid not found');
+			return;
 		END IF;
 		
 		IF valid_classid<1 THEN
 			dbms_output.put_line('classid not found');
+			return;
 		END IF;
 
 		IF valid_enrollment<1 then
-			dbms_output.put_line('student not enrolled in this class');
+			dbms_output.put_line('student not enrolled in this class');	
+			return;
 		END IF;
+
+		 select course_no into c_num from classes where p_classid = classid;
+		dbms_output.put_line(c_num);
+                select dept_code into c_dept_code from classes where p_classid = classid;
+
+		dbms_output.put_line(c_dept_code);
+		
+		for 			
+		
+	/*	
+		for i in (select pre_dept_code, pre_course_no from prerequisites where dept_code = c_dept_code and course_no = c_num) loop
+		    	dbms_output.put_line(i.pre_dept_code ||' ' || i.pre_course_no);	
+			
+			select classid into temp_classid from classes c, enrollments e where i.pre_dept_code = dept_code and i.pre_course_no = course_no;
+			/*
+			select count(*) into is_pre from enrollments where classid = temp_classid and p_sid = sid;
+			
+			IF is_pre <1 then
+				dbms_output.put_line('drop request rejected due to prerequisite requirements');
+		
+		
+			END IF; 
+	
+		END LOOP ;
+*/
+		
+	
 	END;
 
 
