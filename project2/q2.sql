@@ -1,6 +1,7 @@
 
 set serveroutput on;
-create or replace sequence s
+
+create sequence s
         START WITH 1000
         INCREMENT BY 1
         NOCACHE;
@@ -9,14 +10,30 @@ CREATE or replace trigger drop_student_trigger AFTER
 DELETE on Enrollments
 FOR EACH ROW
 DECLARE 
-	class_id classes.classid%type;
+--	class_id classes.classid%type;
 	CURSOR c1 is select * from classes where classid = :old.classid;
 BEGIN
-	for c1_record in c1 loop
-		c1_record.class_size := c1_record.class_size - 1;
-	END LOOP;
+	dbms_output.put_line('TRIGGER LAUNCHED');
+	--for c1_record in c1 loop
+		update Classes SET class_size = class_size - 1 where classid = :old.classid;
+	--END LOOP
 	
 
+END;
+
+
+/
+show errors;
+
+CREATE or REPLACE trigger delete_student_trigger AFTER DELETE on students
+FOR EACH ROW
+DECLARE
+--	deleted_sid students.sid%type;	
+--	CURSOR c1 is select * from enrollments where sid = :old.sid;
+BEGIN
+--	for c1_record in c1 loop
+		delete from enrollments where sid = :old.sid;
+--	END LOOP;
 END;
 /
 show errors;
@@ -35,7 +52,7 @@ PROCEDURE get_pre(p_dept_code in prerequisites.dept_code%type,p_course_no in pre
 PROCEDURE get_class_info(c_id in classes.classid%type, c1 out sys_refcursor);
 
 PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%type);
-
+PROCEDURE delete_student(p_sid in students.sid%type);
 end;
 /
 show errors;
@@ -170,7 +187,7 @@ PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%
 		Loop iterate through all the prereq courses and the classes that the student is taking. If the class is a prereq for a class
 		that a student is taking, then we don't allow the student to drop the classs
 	*/	
-		for i in (select pre_dept_code, pre_course_no from prerequisites where dept_code = c_dept_code and course_no = c_num) loop
+		for i in (select pre_dept_code, pre_course_no from prerequisites where pre_dept_code = c_dept_code and pre_course_no = c_num) loop
 		    	dbms_output.put_line(i.pre_dept_code ||' ' || i.pre_course_no);	
 			for j in (select dept_code, course_no from classes c, enrollments e where  e.classid = c.classid and p_sid = e.sid) loop
 				if(i.pre_dept_code = j.dept_code and i.pre_course_no = j.course_no) then
@@ -197,6 +214,17 @@ PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%
 	
 	END;
 
+PROCEDURE delete_student(p_sid in students.sid%type) as
+	valid_student number;
+	BEGIN
+		 select count(*) into valid_student from students where p_sid = sid;
+		 if valid_student <1 then
+			dbms_output.put_line('sid not found');
+		END IF;
+		delete from students where sid = p_sid;
+		
+		
+END;
 
 END;
 /
