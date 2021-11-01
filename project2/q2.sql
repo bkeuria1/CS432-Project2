@@ -138,10 +138,8 @@ PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%
         valid_enrollment number;	
 	c_num number;
 	c_dept_code varchar2(4);
-	temp_classid varchar2(10);
-	is_pre number;
-	num_enrollments number;
-	cursor prereq is select pre.dept_code, pre.course_no from prerequisites pre, classes c where p_classid = c.classid and c.dept_code = pre.pre_dept_code and c.course_no = pre.pre_course_no;
+	class_enrollment number;
+	student_enrollment number;
 	BEGIN
 		select count(*) into valid_student from students where p_sid = sid;
 		select count(*) into valid_classid from classes where p_classid = classid;
@@ -164,29 +162,38 @@ PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%
 
 		 select course_no into c_num from classes where p_classid = classid;
 		dbms_output.put_line(c_num);
-                select dept_code into c_dept_code from classes where p_classid = classid;
 
+                select dept_code into c_dept_code from classes where p_classid = classid;
 		dbms_output.put_line(c_dept_code);
-		
-		for 			
-		
-	/*	
+		 					
+	/*
+		Loop iterate through all the prereq courses and the classes that the student is taking. If the class is a prereq for a class
+		that a student is taking, then we don't allow the student to drop the classs
+	*/	
 		for i in (select pre_dept_code, pre_course_no from prerequisites where dept_code = c_dept_code and course_no = c_num) loop
 		    	dbms_output.put_line(i.pre_dept_code ||' ' || i.pre_course_no);	
-			
-			select classid into temp_classid from classes c, enrollments e where i.pre_dept_code = dept_code and i.pre_course_no = course_no;
-			/*
-			select count(*) into is_pre from enrollments where classid = temp_classid and p_sid = sid;
-			
-			IF is_pre <1 then
-				dbms_output.put_line('drop request rejected due to prerequisite requirements');
+			for j in (select dept_code, course_no from classes c, enrollments e where  e.classid = c.classid and p_sid = e.sid) loop
+				if(i.pre_dept_code = j.dept_code and i.pre_course_no = j.course_no) then
 		
+					dbms_output.put_line('drop request rejected due to prequisite requirements');
+					return;
+				END IF; 	
+			END LOOP ;
+		END LOOP;
 		
-			END IF; 
-	
-		END LOOP ;
+/*
+	Case where student can drop the class
 */
-		
+	DELETE from enrollments where sid = p_sid and classid = p_classid;
+	select count(classid) into student_enrollment from enrollments where p_sid = sid;
+	select count(sid) into class_enrollment from enrollments where classid = p_classid; 
+	
+	IF student_enrollment=0 then
+		dbms_output.put_line('student enrolled in no class');
+	END IF;
+	IF class_enrollment = 0 then
+		dbms_output.put_line('no student in this class');
+	END IF;
 	
 	END;
 
