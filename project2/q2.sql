@@ -1,6 +1,6 @@
 
 set serveroutput on;
-drop sequence log_id;
+--drop sequence log_id;
 create sequence log_id
         START WITH 1000
         INCREMENT BY 1
@@ -15,8 +15,7 @@ DECLARE
 	
 	
 BEGIN
-	        select user  into uname from dual;
-		dbms_output.put_line(log_id.nextval);	
+	        select user  into uname from dual;	
 		update Classes SET class_size = class_size - 1 where classid = :old.classid;
 		insert into logs values(log_id.nextval, uname, sysdate,'enrollments', 'delete', :old.sid || ',' || :old.classid);
 END;
@@ -65,22 +64,29 @@ END;
 show errors;
 
 create or replace package srs as
+--Producedure name goes under the corresponding question numbers
+--(2)
 procedure show_students(c1 in out sys_refcursor);
 procedure show_courses(c1 in out sys_refcursor);
 
 procedure show_classes(c1 in out sys_refcursor);
 procedure show_enrollments(c1 in out sys_refcursor);
 procedure show_pre(c1 in out sys_refcursor);
-
+--(3)
 PROCEDURE insert_student(sid in students.sid%type, firstname in students.firstname%type, lastname in students.lastname%type, status in students.status%type, gpa in students.gpa%type, email in students.email%type);
-
+--(4)
 PROCEDURE get_student_info(p_sid in students.sid%type, c1 out sys_refcursor);
+--(5)
 PROCEDURE get_pre(p_dept_code in prerequisites.dept_code%type,p_course_no in prerequisites.course_no%type, c1 out sys_refcursor);  
+--(6)
 PROCEDURE get_class_info(c_id in classes.classid%type, c1 out sys_refcursor);
-
-PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%type);
-PROCEDURE delete_student(p_sid in students.sid%type);
+--(7)
 PROCEDURE enroll_student(p_sid in students.sid%type, p_classid in classes.classid%type);
+--(8)
+PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%type);
+--(9)
+PROCEDURE delete_student(p_sid in students.sid%type);
+
 end;
 /
 show errors;
@@ -229,15 +235,17 @@ PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%
 		Loop iterate through all the prereq courses and the classes that the student is taking. If the class is a prereq for a class
 		that a student is taking, then we don't allow the student to drop the classs
 	*/	
-		for i in (select pre_dept_code, pre_course_no from prerequisites where pre_dept_code = c_dept_code and pre_course_no = c_num) loop
-		    	dbms_output.put_line(i.pre_dept_code ||' ' || i.pre_course_no);	
-			for j in (select dept_code, course_no from classes c, enrollments e where  e.classid = c.classid and p_sid = e.sid) loop
-				if(i.pre_dept_code = j.dept_code and i.pre_course_no = j.course_no) then
+		for i in (select dept_code, course_no from prerequisites where pre_dept_code = c_dept_code and pre_course_no = c_num) loop
+		    	--dbms_output.put_line(i.dept_code ||' ' || i.course_no);
+				
+			for j in (select dept_code, course_no from classes c, enrollments e where  e.classid = c.classid and p_sid = e.sid ) loop
+				if(i.dept_code = j.dept_code and i.course_no = j.course_no)then
 		
 					dbms_output.put_line('drop request rejected due to prequisite requirements');
 					return;
 				END IF; 	
 			END LOOP ;
+		
 		END LOOP;
 		
 /*
