@@ -4,7 +4,7 @@ drop sequence log_id;
 create sequence log_id
         START WITH 1000
         INCREMENT BY 1
-        NOCACHE;
+        NOCACHE
 /
 show errors;
 CREATE or replace trigger drop_student_trigger AFTER
@@ -16,8 +16,7 @@ DECLARE
 	
 BEGIN
 	        select user  into uname from dual;
-		dbms_output.put_line('TRIGGER LAUNCHED');
-	
+		dbms_output.put_line(log_id.nextval);	
 		update Classes SET class_size = class_size - 1 where classid = :old.classid;
 		insert into logs values(log_id.nextval, uname, sysdate,'enrollments', 'delete', :old.sid || ',' || :old.classid);
 END;
@@ -58,7 +57,8 @@ DECLARE
 BEGIN
 --      for c1_record in c1 loop
                   select user into uname from dual;
-                insert into logs values(log_id.nextval, uname, sysdate, 'Enrollments', 'insert', :new.sid ||','||:new.classid);
+		  update Classes SET class_size = class_size+1 where classid = :new.classid;
+               	 insert into logs values(log_id.nextval, uname, sysdate, 'Enrollments', 'insert', :new.sid ||','||:new.classid);
 --      END LOOP;
 END;
 /
@@ -279,33 +279,35 @@ PROCEDURE enroll_student(p_sid in students.sid%type, p_classid in classes.classi
 	class_semester classes.semester%type;
 	class_year number;
 	c_num number;
+	pre_req_grade varchar2(10);
 	c_dept_code classes.dept_code%type; 
 	BEGIN
-		 select semester into class_semester from classes where classid = p_classid;
-		 select year into class_year from classes where classid = p_classid;
 		 select count(*) into valid_student from students where p_sid = sid;
 		 select count(*) into valid_classid from classes where p_classid = classid;
+	            IF valid_student<1 THEN
+                        dbms_output.put_line('sid not found');
+                        return;
+                END IF;
+
+                IF valid_classid<1 THEN
+                       dbms_output.put_line('invalid classid');
+                       return;
+                END IF;
+		  select semester into class_semester from classes where classid = p_classid;
+                 select year into class_year from classes where classid = p_classid;
 		 select class_size into c_size from classes where p_classid = classid;
 		 select limit into class_limit from classes where p_classid = classid;
 		 select count(*) into in_class from enrollments where p_sid = sid and p_classid = classid;
 		 select count(*) into valid_load from enrollments inner join classes using(classid) where p_sid = sid and year = class_year and semester = class_semester; 
 		 select course_no into c_num from classes where classid = p_classid;
 		 select dept_code into c_dept_code from classes where classid = p_classid; 
-		IF valid_student<1 THEN
-                 	dbms_output.put_line('sid not found');
-                        return;
-                END IF;
-		IF valid_classid<1 THEN
-                       dbms_output.put_line('invalid classid');
-                       return;
-                END IF;
 		
 		IF c_size = class_limit then
 			dbms_output.put_line('class full');
 			return;
 		END IF;
 		
-		IF in_class>1 then
+		IF in_class>=1 then
 			dbms_output.put_line('already in class');
 			return;
 		END IF;
@@ -320,8 +322,19 @@ PROCEDURE enroll_student(p_sid in students.sid%type, p_classid in classes.classi
 			2)check add students into the enrollments table
 			3)modify add_enrollment trigger
 		*/
+		   for i in (select pre_dept_code, pre_course_no from prerequisites  where dept_code = c_dept_code and course_no = c_num) loop
+                     	select lgrade into pre_req_grade from classes c, enrollments e where c.classid = e.classid and e.sid = p_sid and i.pre_dept_code = c.dept_code and i.pre_course_no = c.course_no;
 		
-END;
+			if pre_req_grade > 'C' then
+				
+				dbms_output.put_line('Prerequisite courses have not been completed');
+				return;
+			END if;
+		
+                   END LOOP;
+		insert into enrollments values(p_sid, p_classid,null);
+
+	END;
 END;
 /
 show errors;
