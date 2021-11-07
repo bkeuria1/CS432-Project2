@@ -66,13 +66,13 @@ show errors;
 create or replace package srs as
 --Producedure name goes under the corresponding question numbers
 --(2)
-procedure show_students(c1 in out sys_refcursor);
-procedure show_courses(c1 in out sys_refcursor);
+procedure show_students(c1 out sys_refcursor);
+procedure show_courses(c1  out sys_refcursor);
 
-procedure show_classes(c1 in out sys_refcursor);
-procedure show_enrollments(c1 in out sys_refcursor);
-procedure show_pre(c1 in out sys_refcursor);
-PROCEDURE show_logs(c1 in out SYS_REFCURSOR);
+procedure show_classes(c1  out sys_refcursor);
+procedure show_enrollments(c1 out sys_refcursor);
+procedure show_pre(c1  out sys_refcursor);
+PROCEDURE show_logs(c1  out SYS_REFCURSOR);
 --(3)
 PROCEDURE insert_student(sid in students.sid%type, firstname in students.firstname%type, lastname in students.lastname%type, status in students.status%type, gpa in students.gpa%type, email in students.email%type);
 --(4)
@@ -94,39 +94,39 @@ show errors;
 
 create or replace package body srs as
 --the show_* procedures have essentially the same code. We use cursors to store multiple tuples
- PROCEDURE show_students(c1 in OUT SYS_REFCURSOR) as
+ PROCEDURE show_students(c1  OUT SYS_REFCURSOR) as
 BEGIN
 
    OPEN c1 FOR SELECT * from students;
 END;
 
-PROCEDURE show_courses(c1 in OUT SYS_REFCURSOR) as
+PROCEDURE show_courses(c1  OUT SYS_REFCURSOR) as
 BEGIN
 
    OPEN c1 FOR SELECT * from courses;
 END;
 
-PROCEDURE show_classes(c1 in OUT SYS_REFCURSOR) as
+PROCEDURE show_classes(c1  OUT SYS_REFCURSOR) as
 BEGIN
 
    OPEN c1 FOR SELECT * from classes;
 END;
 
 
-PROCEDURE show_enrollments(c1 in OUT SYS_REFCURSOR) as
+PROCEDURE show_enrollments(c1  OUT SYS_REFCURSOR) as
 BEGIN
 
    OPEN c1 FOR SELECT * from enrollments;
 END;
 
 
-PROCEDURE show_pre(c1 in OUT SYS_REFCURSOR) as
+PROCEDURE show_pre(c1 OUT SYS_REFCURSOR) as
 BEGIN
 
    OPEN c1 FOR SELECT * from prerequisites;
 END;
 
-PROCEDURE show_logs(c1 in out SYS_REFCURSOR) as 
+PROCEDURE show_logs(c1  out SYS_REFCURSOR) as 
 BEGIN
 	OPEN c1 FOR Select * from logs;
 END;
