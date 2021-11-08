@@ -76,17 +76,17 @@ PROCEDURE show_logs(c1  out SYS_REFCURSOR);
 --(3)
 PROCEDURE insert_student(sid in students.sid%type, firstname in students.firstname%type, lastname in students.lastname%type, status in students.status%type, gpa in students.gpa%type, email in students.email%type);
 --(4)
-PROCEDURE get_student_info(p_sid in students.sid%type, c1 out sys_refcursor);
+PROCEDURE get_student_info(p_sid in students.sid%type, c1 out sys_refcursor,errMsg out varchar2);
 --(5)
 PROCEDURE get_pre(p_dept_code in prerequisites.dept_code%type,p_course_no in prerequisites.course_no%type, c1 out sys_refcursor);  
 --(6)
-PROCEDURE get_class_info(c_id in classes.classid%type, c1 out sys_refcursor);
+PROCEDURE get_class_info(c_id in classes.classid%type, c1 out sys_refcursor, errMsg out varchar2);
 --(7)
-PROCEDURE enroll_student(p_sid in students.sid%type, p_classid in classes.classid%type);
+PROCEDURE enroll_student(p_sid in students.sid%type, p_classid in classes.classid%type, errMsg out varchar2);
 --(8)
-PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%type);
+PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%type, errMsg out varchar2);
 --(9)
-PROCEDURE delete_student(p_sid in students.sid%type);
+PROCEDURE delete_student(p_sid in students.sid%type, errMsg out varchar2);
 
 end;
 /
@@ -140,7 +140,7 @@ INSERT INTO students VALUES(sid, firstname, lastname, status, gpa, email);
 END;
 --input: student id
 --output: refcursor containing the required student info
-PROCEDURE get_student_info(p_sid in students.sid%type, c1 out sys_refcursor) as
+PROCEDURE get_student_info(p_sid in students.sid%type, c1 out sys_refcursor,errMsg out varchar2) as
 	--local procedure variables
 	enrollment_sid enrollments.sid%TYPE;
         sid_count number;	
@@ -153,27 +153,31 @@ PROCEDURE get_student_info(p_sid in students.sid%type, c1 out sys_refcursor) as
 	--IF the count is less than 1, the attribute does not exist 
 	IF sid_count<1 THEN
 		dbms_output.put_line('The SID is invalid');
-		
+		errMsg:= 'The SID is invalid';
+		return;
 	END IF;
 	
 	IF enrollment_count<1 THEN
-		dbms_output.put_line('The student has not taken any course');
+		dbms_output.put_line('The student has not taken any courses');
+		errMsg:='The student has not taken any courses';
+		return;
 	END IF;
+	
 		/*
 		Use a tuple to store mutliple tuples
 		need to use students, enrollment, and classes table
 		need to store the dept_code and course_no so we use concat
+	        */	
 		
-		*/
-		open c1 for select s.sid, s.firstname, s.gpa, e.classid, concat(c.dept_code, c.course_no) as COURSE , c.semester from students s, enrollments e, classes c  where
+		open c1 for select s.sid, s.firstname,s.lastname, s.gpa, e.classid, concat(c.dept_code, c.course_no) as COURSE , c.semester, c.year from students s, enrollments e, classes c  where
 		p_sid = s.sid and e.classid = c.classid and s.sid = e.sid;
-
+	
 
 
 END;
 --input: classid
 --output: cursor containing proper tuples
-PROCEDURE get_class_info(c_id in classes.classid%type, c1 out sys_refcursor) as
+PROCEDURE get_class_info(c_id in classes.classid%type, c1 out sys_refcursor, errMsg out varchar2) as
 	--procedure local variables
 	class_count number;
 	enrollment_count number;
@@ -185,11 +189,13 @@ PROCEDURE get_class_info(c_id in classes.classid%type, c1 out sys_refcursor) as
 	--If the count of enrollment_count or class_count then
 	--no one is enrolled in the class or the classid is invalid, respectivly
 	IF class_count<1 THEN
-		dbms_output.put_line('The classid is invalid');
+		errMsg:= 'The classid is invalid';
+		dbms_output.put_line(errMsg);
 	END IF;
 	
 	IF enrollment_count<1 THEN
-		dbms_output.put_line('No student is enrolled in the class');
+		errMsg := 'No student is enrolled in the class';
+		dbms_output.put_line(errMsg);
 	END IF;
 	--join students, enrollments and classes table to get proper tuples
 
@@ -207,7 +213,7 @@ PROCEDURE get_pre(p_dept_code in prerequisites.dept_code%type,p_course_no in pre
 	END;
 
 
-PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%type) as
+PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%type, errMsg out varchar2) as
 	valid_student number;
 	valid_classid number;
         valid_enrollment number;	
@@ -221,17 +227,20 @@ PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%
 		select count(*) into valid_enrollment from enrollments where p_classid = classid and p_sid = sid;	
 		--check to see if sid and classid are valid and if the student is enrolled in the class
 		IF valid_student<1 THEN
-			dbms_output.put_line('sid not found');
+			errMsg := 'sid not found';
+			dbms_output.put_line(errMsg);
 			return;
 		END IF;
 		
 		IF valid_classid<1 THEN
-			dbms_output.put_line('classid not found');
+			errMsg := 'classid not found';
+			dbms_output.put_line(errMsg);
 			return;
 		END IF;
 
 		IF valid_enrollment<1 then
-			dbms_output.put_line('student not enrolled in this class');	
+			errMsg := 'student not enrolled in this class';
+			dbms_output.put_line(errMsg);	
 			return;
 		END IF;
 		--get the course number of the class
@@ -250,8 +259,8 @@ PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%
 				
 			for j in (select dept_code, course_no from classes c, enrollments e where  e.classid = c.classid and p_sid = e.sid ) loop
 				if(i.dept_code = j.dept_code and i.course_no = j.course_no)then
-		
-					dbms_output.put_line('drop request rejected due to prequisite requirements');
+					errMsg := 'drop request rejected due to prerequisite requirement';
+					dbms_output.put_line(errMsg);
 					return;
 				END IF; 	
 			END LOOP ;
@@ -276,13 +285,14 @@ PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%
 	
 	END;
 
-PROCEDURE delete_student(p_sid in students.sid%type) as
+PROCEDURE delete_student(p_sid in students.sid%type, errMsg out varchar2) as
 	valid_student number;
 	BEGIN
 		--check if the sid is valid
 		 select count(*) into valid_student from students where p_sid = sid;
 		 if valid_student <1 then
-			dbms_output.put_line('sid not found');
+			errMsg := 'sid not found';
+			dbms_output.put_line(errMsg);
 		END IF;
 		--otherwise delete the student from the tables
 		delete from students where sid = p_sid;
@@ -290,7 +300,7 @@ PROCEDURE delete_student(p_sid in students.sid%type) as
 		
 END;
 
-PROCEDURE enroll_student(p_sid in students.sid%type, p_classid in classes.classid%type) as
+PROCEDURE enroll_student(p_sid in students.sid%type, p_classid in classes.classid%type, errMsg out varchar2) as
 	--local procedure variables
 	valid_student number;
 	valid_load number;
@@ -308,12 +318,14 @@ PROCEDURE enroll_student(p_sid in students.sid%type, p_classid in classes.classi
 		 select count(*) into valid_student from students where p_sid = sid;
 		 select count(*) into valid_classid from classes where p_classid = classid;
 	            IF valid_student<1 THEN
-                        dbms_output.put_line('sid not found');
+			errMsg := 'sid not found';
+                        dbms_output.put_line(errMsg);
                         return;
                 END IF;
 
                 IF valid_classid<1 THEN
-                       dbms_output.put_line('invalid classid');
+		       errMsg := 'invalid classid';
+                       dbms_output.put_line(errMsg);
                        return;
                 END IF;
 		--get semester ,year, class size, and limit of the class
@@ -330,17 +342,21 @@ PROCEDURE enroll_student(p_sid in students.sid%type, p_classid in classes.classi
 		 select dept_code into c_dept_code from classes where classid = p_classid; 
 		
 		IF c_size = class_limit then
-			dbms_output.put_line('class full');
+			errMsg := 'class full';
+			dbms_output.put_line(errMsg);
 			return;
 		END IF;
 		
 		IF in_class>=1 then
-			dbms_output.put_line('already in class');
+			errMsg := 'already in class';
+			dbms_output.put_line(errMsg);
 			return;
 		END IF;
 		
 		IF valid_load = 4 then
-			dbms_output.put_line('overloaded');
+			errMsg := 'overloaded';
+			dbms_output.put_line(errMsg);
+			return;
 		END IF;
 
 		 /*
@@ -351,8 +367,8 @@ PROCEDURE enroll_student(p_sid in students.sid%type, p_classid in classes.classi
                      	select lgrade into pre_req_grade from classes c, enrollments e where c.classid = e.classid and e.sid = p_sid and i.pre_dept_code = c.dept_code and i.pre_course_no = c.course_no;
 		
 			if pre_req_grade > 'C' then
-				
-				dbms_output.put_line('Prerequisite courses have not been completed');
+				errMsg := 'Prequitisite course have not been completed';
+				dbms_output.put_line(errMsg);
 				return;
 			END if;
 		

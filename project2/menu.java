@@ -6,6 +6,121 @@ import java.awt.*;
 import oracle.jdbc.pool.OracleDataSource;
 
 public class menu{
+	private void deleteStudent(String sid, Connection conn) throws SQLException{
+		CallableStatement cs = conn.prepareCall("begin  srs.delete_student(?,?); end;");
+		cs.setString(1,sid);
+		cs.registerOutParameter(2,Types.VARCHAR);
+		cs.execute();
+		String error = cs.getString(2);
+		if(error == null){
+			System.out.println("Student: " + sid + " was dropped from the table");
+		}else{
+			System.out.println(error);
+		}
+
+	}
+	private void dropStudent(String sid, String classid, Connection conn) throws SQLException{
+                CallableStatement cs = conn.prepareCall("begin  srs.drop_student(?,?,?); end;");
+                cs.setString(1,sid);
+                cs.setString(2,classid);
+
+                cs.registerOutParameter(3, Types.VARCHAR);
+                cs.execute();
+
+
+                String error = cs.getString(3);
+                if(error == null){
+                        System.out.println("Student: "+ sid + " was dropped from " + classid);
+                }else{
+                        System.out.println(error);
+                }
+                cs.close();
+        }
+     	private void enrollStudent(String sid, String classid, Connection conn) throws SQLException{
+                CallableStatement cs = conn.prepareCall("begin  srs.enroll_student(?,?,?); end;");
+                cs.setString(1,sid);
+		cs.setString(2,classid);
+           
+                cs.registerOutParameter(3, Types.VARCHAR);
+                cs.execute();
+
+        
+                String error = cs.getString(3);
+                if(error == null){
+                	System.out.println("Student: "+ sid + " was enrolled in " + classid);
+                }else{
+                        System.out.println(error);
+                }
+                cs.close();
+        }
+	
+	private void getPre(String dept_code, String course_no, Connection conn) throws SQLException{
+		CallableStatement cs = conn.prepareCall("begin  srs.get_pre(?,?,?); end;");
+		cs.setString(1, dept_code);
+		cs.setString(2, course_no);
+		cs.registerOutParameter(3, OracleTypes.CURSOR);
+		cs.execute();
+		ResultSet rs = (ResultSet)cs.getObject(3);
+
+		if(!rs.next()){
+			System.out.println("There are no prereq course for this course");
+			return;	
+		}else{
+		
+			  do{
+                                        System.out.println(rs.getString(1) + "\t" +
+                                        rs.getString(2));
+                          }while(rs.next());
+		}
+	}
+	private void getStudentInfo(String sid, Connection conn) throws SQLException{
+		CallableStatement cs = conn.prepareCall("begin  srs.get_student_info(?,?,?); end;");
+		cs.setString(1,sid);
+		System.out.println("Getting Student Info");	
+		cs.registerOutParameter(2, OracleTypes.CURSOR);		
+		cs.registerOutParameter(3, Types.VARCHAR);
+		cs.execute();		
+
+		ResultSet rs = (ResultSet)cs.getObject(2);
+		String error = cs.getString(3);
+		if(error == null){
+	   		while (rs.next()) {
+                                      	System.out.println(rs.getString(1) + "\t" +
+                                        rs.getString(2) + "\t" + rs.getString(3) +
+                                        rs.getDouble(4) +
+                                        "\t" + rs.getString(5));
+                                }
+		}else{
+			System.out.println(error);
+		}
+		cs.close();
+	}
+
+		private void getClassInfo(String classid, Connection conn) throws SQLException{
+		CallableStatement cs = conn.prepareCall("begin  srs.get_class_info(?,?,?); end;");
+		cs.setString(1,classid);
+		System.out.println("Getting Student Info");	
+		cs.registerOutParameter(2, OracleTypes.CURSOR);		
+		cs.registerOutParameter(3, Types.VARCHAR);
+		cs.execute();		
+
+		ResultSet rs = (ResultSet)cs.getObject(2);
+		String error = cs.getString(3);
+		if(error == null){
+	   		while (rs.next()) {
+                                      	System.out.println(rs.getString(1) + "\t" +
+                                        rs.getString(2) + "\t" + rs.getString(3) +
+                                        rs.getInt(4) +
+                                        "\t" + rs.getString(5)
+					+ "\t" + rs.getString(6)  + "\t" + rs.getString(7)  + "\t" + rs.getString(8));
+                                }
+		}else{
+			System.out.println(error);
+		}
+		cs.close();
+	}
+
+
 	private void insertStudent(String sid, String firstname, String lastname, String status, String gpa, String email, Connection conn) throws SQLException{
 		CallableStatement cs = conn.prepareCall("begin  srs.insert_student(?,?,?,?,?,?); end;");
 		cs.setString(1, sid);
@@ -143,12 +258,12 @@ public class menu{
 		System.out.println("1. Print out the tables");
 		System.out.println("2. Insert a student into a table");
 		System.out.println("3. Print out student information");
-		System.out.println("5. Get indirect and direct prereq courses");
-		System.out.println("6. Get class info");
-		System.out.println("7. Enroll Student in a class");
-		System.out.println("8. Drop a student from a class");
-		System.out.println("9. Delete student from the table");
-		System.out.println("10. Exit The Program");
+		System.out.println("4. Get indirect and direct prereq courses");
+		System.out.println("5. Get class info");
+		System.out.println("6. Enroll Student in a class");
+		System.out.println("7. Drop a student from a class");
+		System.out.println("8. Delete student from the table");
+		System.out.println("9. Exit The Program");
 		System.out.print("Your option: ");
 
 		BufferedReader  readKeyBoard;
@@ -156,7 +271,7 @@ public class menu{
         	readKeyBoard = new BufferedReader(new InputStreamReader(System.in));
 		choice = readKeyBoard.readLine();
 		switch(choice){
-			case("1"):
+			case("1"):{
 				System.out.println("You chose to print out a table");
 				System.out.println("Which table?");
 				System.out.println("1. Students");
@@ -169,7 +284,8 @@ public class menu{
 				String tableChoice = readKeyBoard.readLine();
 				m.getTable(tableChoice,conn);
 				break;
-			case("2"):
+			}
+			case("2"):{
 				String sid, firstname, lastname, status, gpa, email;
 				System.out.print("Enter SID: ");
 				sid = readKeyBoard.readLine();
@@ -190,7 +306,57 @@ public class menu{
                                   email = readKeyBoard.readLine();
 				  m.insertStudent(sid,firstname,lastname,status,gpa,email,conn);
 				  break;
-			case("10"):
+			}
+			case("3"):{
+				String sid;
+				System.out.print("Enter sid: ");
+				sid = readKeyBoard.readLine();
+				m.getStudentInfo(sid,conn);
+				break;
+			}
+			case("4"):{
+				String dept_code, course_no;
+				System.out.print("Enter department code: ");
+				dept_code = readKeyBoard.readLine();
+			 	System.out.print("Enter Course No : ");
+                                course_no = readKeyBoard.readLine();
+				m.getPre(dept_code,course_no, conn);
+				break;
+			}
+		        case("5"):{
+				String classid;
+				System.out.print("Enter classid: ");
+				classid = readKeyBoard.readLine();
+				m.getClassInfo(classid,conn);
+				break;
+                        }
+			case("6"):{
+				String sid, classid;	
+				System.out.print("Enter sid: ");
+				sid = readKeyBoard.readLine();	
+				System.out.print("Enter classid: ");
+				classid = readKeyBoard.readLine();
+				m.enrollStudent(sid, classid, conn);
+				break;
+			
+			}
+			case("7"):{
+				String sid, classid;
+                                System.out.print("Enter sid: ");
+                                sid = readKeyBoard.readLine();
+                                System.out.print("Enter classid: ");
+                                classid = readKeyBoard.readLine();
+                                m.dropStudent(sid, classid, conn);
+                                break;
+			}
+			case("8"):{
+				String sid;
+				System.out.print("Enter sid: ");
+				sid = readKeyBoard.readLine();
+				m.deleteStudent(sid,conn);
+				break;
+			}
+			case("9"):
 				System.out.println("Exiting ...");
 				conn.close();
 				return;
@@ -201,6 +367,6 @@ public class menu{
 	catch(SQLException ex){
 		 System.out.println ("\n*** SQLException caught ***\n" + ex.getMessage());	
 	}
-	 catch (Exception e) {System.out.println ("\n*** other Exception caught ***\n");}
+	 catch (Exception e) {System.out.println ("\n*** other Exception caught ***\n"+ e.getMessage());}
 	}
 }
