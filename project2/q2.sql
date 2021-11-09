@@ -1,4 +1,4 @@
-
+--set serveroutput on to display dbms_output messages
 set serveroutput on;
 --drop sequence log_id;
 create sequence log_id
@@ -7,6 +7,7 @@ create sequence log_id
         NOCACHE
 /
 show errors;
+
 CREATE or replace trigger drop_student_trigger AFTER
 DELETE on Enrollments
 FOR EACH ROW
@@ -17,7 +18,8 @@ DECLARE
 BEGIN
 	        --the dual table is where we can access the username of the person who made the operation
 		--we can use sysdate to get the current date/time
-		select user  into uname from dual;	
+		select user  into uname from dual;
+		--update class size	
 		update Classes SET class_size = class_size - 1 where classid = :old.classid;
 		insert into logs values(log_id.nextval, uname, sysdate,'enrollments', 'delete', :old.sid || ',' || :old.classid);
 END;
@@ -33,6 +35,7 @@ DECLARE
 
 BEGIN
 		  select user into uname from dual;
+		--delete student from the enrollments
 		delete from enrollments where sid = :old.sid;
 		insert into logs values(log_id.nextval, uname, sysdate, 'Students', 'delete', :old.sid);
 END;
@@ -45,6 +48,7 @@ DECLARE
 	 uname varchar2(50);
 BEGIN
                 select user into uname from dual;
+		--insert tuple into logs table
                 insert into logs values(log_id.nextval, uname, sysdate, 'Students', 'insert', :new.sid);
 
 END;
@@ -57,6 +61,7 @@ DECLARE
 	 uname varchar2(50);
 BEGIN
                   select user into uname from dual;
+		--increase class size by 1
 		  update Classes SET class_size = class_size+1 where classid = :new.classid;
                	 insert into logs values(log_id.nextval, uname, sysdate, 'Enrollments', 'insert', :new.sid ||','||:new.classid);
 END;
@@ -84,7 +89,7 @@ PROCEDURE get_class_info(c_id in classes.classid%type, c1 out sys_refcursor, err
 --(7)
 PROCEDURE enroll_student(p_sid in students.sid%type, p_classid in classes.classid%type, errMsg out varchar2);
 --(8)
-PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%type, errMsg out varchar2);
+PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%type, errMsg out varchar2, classStatus out varchar2);
 --(9)
 PROCEDURE delete_student(p_sid in students.sid%type, errMsg out varchar2);
 
@@ -140,6 +145,7 @@ INSERT INTO students VALUES(sid, firstname, lastname, status, gpa, email);
 END;
 --input: student id
 --output: refcursor containing the required student info
+--output: errMsg that contains any error messages. if any
 PROCEDURE get_student_info(p_sid in students.sid%type, c1 out sys_refcursor,errMsg out varchar2) as
 	--local procedure variables
 	enrollment_sid enrollments.sid%TYPE;
@@ -213,7 +219,7 @@ PROCEDURE get_pre(p_dept_code in prerequisites.dept_code%type,p_course_no in pre
 	END;
 
 
-PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%type, errMsg out varchar2) as
+PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%type, errMsg out varchar2, classStatus out varchar2) as
 	valid_student number;
 	valid_classid number;
         valid_enrollment number;	
@@ -222,8 +228,12 @@ PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%
 	class_enrollment number;
 	student_enrollment number;
 	BEGIN
+		classStatus := ''; 
+		--check  if the sid is valid
 		select count(*) into valid_student from students where p_sid = sid;
+		--check if classid is valid
 		select count(*) into valid_classid from classes where p_classid = classid;
+		--check if student is enrolled in the class
 		select count(*) into valid_enrollment from enrollments where p_classid = classid and p_sid = sid;	
 		--check to see if sid and classid are valid and if the student is enrolled in the class
 		IF valid_student<1 THEN
@@ -277,10 +287,12 @@ PROCEDURE drop_student(p_sid in students.sid%type, p_classid in classes.classid%
 	select count(sid) into class_enrollment from enrollments where classid = p_classid; 
 	
 	IF student_enrollment=0 then
-		dbms_output.put_line('student enrolled in no class');
+		classStatus := CONCAT(classStatus, 'student enrolled in no class');
+		dbms_output.put_line(classStatus);
 	END IF;
 	IF class_enrollment = 0 then
-		dbms_output.put_line('no student in this class');
+		classStatus := CONCAT(classStatus, 'no student in this class');
+		dbms_output.put_line(classStatus);
 	END IF;
 	
 	END;
@@ -312,6 +324,7 @@ PROCEDURE enroll_student(p_sid in students.sid%type, p_classid in classes.classi
 	class_year number;
 	c_num number;
 	pre_req_grade varchar2(10);
+	pre_req_enrolled number;
 	c_dept_code classes.dept_code%type; 
 	BEGIN
 		--check for valid sid and classid
@@ -328,6 +341,7 @@ PROCEDURE enroll_student(p_sid in students.sid%type, p_classid in classes.classi
                        dbms_output.put_line(errMsg);
                        return;
                 END IF;
+		errMsg := 'Prequitisite course have not been completed';
 		--get semester ,year, class size, and limit of the class
 		  select semester into class_semester from classes where classid = p_classid;
                  select year into class_year from classes where classid = p_classid;
@@ -340,7 +354,7 @@ PROCEDURE enroll_student(p_sid in students.sid%type, p_classid in classes.classi
 		--get course no and dept_code of the class	 
 		select course_no into c_num from classes where classid = p_classid;
 		 select dept_code into c_dept_code from classes where classid = p_classid; 
-		
+		dbms_output.put_line('Error?');
 		IF c_size = class_limit then
 			errMsg := 'class full';
 			dbms_output.put_line(errMsg);
@@ -364,10 +378,21 @@ PROCEDURE enroll_student(p_sid in students.sid%type, p_classid in classes.classi
 			find the grade of the student in each direct prereq course 
 		*/
 		   for i in (select pre_dept_code, pre_course_no from prerequisites  where dept_code = c_dept_code and course_no = c_num) loop
-                     	select lgrade into pre_req_grade from classes c, enrollments e where c.classid = e.classid and e.sid = p_sid and i.pre_dept_code = c.dept_code and i.pre_course_no = c.course_no;
 		
-			if pre_req_grade > 'C' then
-				errMsg := 'Prequitisite course have not been completed';
+		
+		
+			--need make sure student is actuall enrolled in the preq class before check the grade. Helps to avoid 'no data found' error
+		
+			select count(*) into pre_req_enrolled from classes c, enrollments e where c.classid = e.classid and e.sid = p_sid and i.pre_dept_code = c.dept_code and i.pre_course_no = c.course_no;
+			dbms_output.put_line(pre_req_enrolled);
+			if pre_req_enrolled = 0 THEN
+                                dbms_output.put_line(errMsg);
+				return;
+			END IF;
+			
+                    	select lgrade into pre_req_grade from classes c, enrollments e where c.classid = e.classid and e.sid = p_sid and i.pre_dept_code = c.dept_code and i.pre_course_no = c.course_no;
+			--check to see student made prereq grade requirements
+			if pre_req_grade > 'C' or pre_req_grade is NULL then
 				dbms_output.put_line(errMsg);
 				return;
 			END if;

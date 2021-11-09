@@ -6,17 +6,19 @@ import java.awt.*;
 import oracle.jdbc.pool.OracleDataSource;
 
 public class menu{
+
 	private void deleteStudent(String sid, Connection conn) throws SQLException{
 		CallableStatement cs = conn.prepareCall("begin  srs.delete_student(?,?); end;");
-		cs.setString(1,sid);
-		cs.registerOutParameter(2,Types.VARCHAR);
-		cs.execute();
-		String error = cs.getString(2);
-		if(error == null){
+		cs.setString(1,sid); //pass the sid as the first parameter
+		cs.registerOutParameter(2,Types.VARCHAR); //register output parameter
+		cs.execute(); //execute query
+		String error = cs.getString(2); //get the error message, if needed
+		if(error == null){ //if error is null, then there is no error
 			System.out.println("Student: " + sid + " was dropped from the table");
 		}else{
 			System.out.println(error);
 		}
+		cs.close(); //close connection
 
 	}
 	private void dropStudent(String sid, String classid, Connection conn) throws SQLException{
@@ -24,14 +26,19 @@ public class menu{
                 cs.setString(1,sid);
                 cs.setString(2,classid);
 
-                cs.registerOutParameter(3, Types.VARCHAR);
+                cs.registerOutParameter(3, Types.VARCHAR); //register the error msg
+		cs.registerOutParameter(4, Types.VARCHAR); //register the class status variable
                 cs.execute();
 
 
                 String error = cs.getString(3);
+		String classStatus = cs.getString(4); 
                 if(error == null){
                         System.out.println("Student: "+ sid + " was dropped from " + classid);
-                }else{
+                	if(classStatus!=null){ //if no error and the classStatus message is not null, print out the classStatus msg
+				System.out.println(classStatus);
+			}
+		}else{
                         System.out.println(error);
                 }
                 cs.close();
@@ -61,12 +68,13 @@ public class menu{
 		cs.registerOutParameter(3, OracleTypes.CURSOR);
 		cs.execute();
 		ResultSet rs = (ResultSet)cs.getObject(3);
-
+	
+		//get to see if the cursor is empty
 		if(!rs.next()){
 			System.out.println("There are no prereq course for this course");
 			return;	
 		}else{
-		
+			 //print out the contents of the cursor
 			  do{
                                         System.out.println(rs.getString(1) + "\t" +
                                         rs.getString(2));
@@ -77,12 +85,12 @@ public class menu{
 		CallableStatement cs = conn.prepareCall("begin  srs.get_student_info(?,?,?); end;");
 		cs.setString(1,sid);
 		System.out.println("Getting Student Info");	
-		cs.registerOutParameter(2, OracleTypes.CURSOR);		
-		cs.registerOutParameter(3, Types.VARCHAR);
+		cs.registerOutParameter(2, OracleTypes.CURSOR);	//register the cursor output	
+		cs.registerOutParameter(3, Types.VARCHAR); //register the error msg, if any
 		cs.execute();		
 
 		ResultSet rs = (ResultSet)cs.getObject(2);
-		String error = cs.getString(3);
+		String error = cs.getString(3); //store the error msg if necessary
 		if(error == null){
 	   		while (rs.next()) {
                                       	System.out.println(rs.getString(1) + "\t" +
@@ -101,12 +109,12 @@ public class menu{
 		cs.setString(1,classid);
 		System.out.println("Getting Student Info");	
 		cs.registerOutParameter(2, OracleTypes.CURSOR);		
-		cs.registerOutParameter(3, Types.VARCHAR);
+		cs.registerOutParameter(3, Types.VARCHAR); 
 		cs.execute();		
 
-		ResultSet rs = (ResultSet)cs.getObject(2);
-		String error = cs.getString(3);
-		if(error == null){
+		ResultSet rs = (ResultSet)cs.getObject(2); //get the cursor
+		String error = cs.getString(3); //get the error msg
+		if(error == null){ //if no error, print out the contents of the cursor
 	   		while (rs.next()) {
                                       	System.out.println(rs.getString(1) + "\t" +
                                         rs.getString(2) + "\t" + rs.getString(3) +
@@ -127,14 +135,18 @@ public class menu{
 		cs.setString(2,firstname);
 		cs.setString(3,lastname);
 		cs.setString(4, status);
-		cs.setDouble(5,Double.parseDouble(gpa));
+		cs.setDouble(5,Double.parseDouble(gpa)); //need to conver the GPA into a double
 		cs.setString(6, email);
 		cs.executeQuery();
+		//Any violation of the table constraints
+		//will be caught
+		//If the insertion is succesfull, print out a message
 		System.out.println("The student with sid " + sid + " has been entered into the system");
 	}
 	private void getTable(String tableChoice, Connection conn) throws SQLException{
 		switch(tableChoice){
 			case("1"):{
+				//print out the students table
 				CallableStatement cs = conn.prepareCall("begin  srs.show_students(?); end;");
 				
 				cs.registerOutParameter(1, OracleTypes.CURSOR);
@@ -146,7 +158,7 @@ public class menu{
 				while (rs.next()) {
             				System.out.println(rs.getString(1) + "\t" +
              				rs.getString(2) + "\t" + rs.getString(3) +
-                			rs.getString(4) +
+                			"\t"+rs.getString(4) +
                			        "\t" + rs.getDouble(5) + "\t" +
                 			rs.getString(6));
         			}
@@ -154,6 +166,7 @@ public class menu{
 				break;
 			}
 			case("2"):{
+				//print out the enrollments table
 			 	CallableStatement cs = conn.prepareCall("begin  srs.show_enrollments(?); end;");
 
                                 cs.registerOutParameter(1, OracleTypes.CURSOR);
@@ -170,6 +183,7 @@ public class menu{
                                 break;
 			}
 			 case("3"):{
+				//print out the courses table
                                 CallableStatement cs = conn.prepareCall("begin  srs.show_courses(?); end;");
 
                                 cs.registerOutParameter(1, OracleTypes.CURSOR);
@@ -186,6 +200,7 @@ public class menu{
                                 break;
                         }
 			  case("4"):{
+				//print out the classes table
                                 CallableStatement cs = conn.prepareCall("begin  srs.show_classes(?); end;");
 
                                 cs.registerOutParameter(1, OracleTypes.CURSOR);
@@ -207,6 +222,7 @@ public class menu{
 		
 
 		      	case("5"):{
+				//print out the prerequisites table
                                 CallableStatement cs = conn.prepareCall("begin  srs.show_pre(?); end;");
 
                                 cs.registerOutParameter(1, OracleTypes.CURSOR);
@@ -224,6 +240,7 @@ public class menu{
                                 break;
                         }
 		  	case("6"):{
+				//print out the logs table
                                 CallableStatement cs = conn.prepareCall("begin  srs.show_logs(?); end;");
 
                                 cs.registerOutParameter(1, OracleTypes.CURSOR);
@@ -234,8 +251,8 @@ public class menu{
 
                                 while (rs.next()) {
                                         System.out.println(rs.getString(1) + "\t" +
-                                        rs.getInt(2) + "\t" + rs.getString(3) +
-                                         "\t" + rs.getInt(4) + "\t" + rs.getString(5) + "\t" +
+                                        rs.getString(2) + "\t" + rs.getString(3) +
+                                         "\t" + rs.getString(4) + "\t" + rs.getString(5) + "\t" +
 					rs.getString(6));
                                 }
 				cs.close();
@@ -249,11 +266,13 @@ public class menu{
 	public static void main(String args [])throws SQLException{
 		
 	try{	
-		menu m = new menu();
+		menu m = new menu();	
+		//establish a connection with oracle
 		OracleDataSource ds = new oracle.jdbc.pool.OracleDataSource();
         	ds.setURL("jdbc:oracle:thin:@castor.cc.binghamton.edu:1521:ACAD111");
         	Connection conn = ds.getConnection("bkeuria1", "BingBong");
 		while(true){
+		//display the menu options
 		System.out.println("Welcome to the student registration system. Please choose an option to begin");
 		System.out.println("1. Print out the tables");
 		System.out.println("2. Insert a student into a table");
@@ -265,7 +284,7 @@ public class menu{
 		System.out.println("8. Delete student from the table");
 		System.out.println("9. Exit The Program");
 		System.out.print("Your option: ");
-
+		//get user input
 		BufferedReader  readKeyBoard;
         	String choice  ;
         	readKeyBoard = new BufferedReader(new InputStreamReader(System.in));
@@ -363,7 +382,8 @@ public class menu{
 		}
 		
 	}
-	}	
+	}
+	//catch exceptions	
 	catch(SQLException ex){
 		 System.out.println ("\n*** SQLException caught ***\n" + ex.getMessage());	
 	}
