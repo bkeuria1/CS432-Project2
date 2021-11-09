@@ -53,9 +53,15 @@ insert into classes values  ('c0009', 'BIOL', 400, 1, 2019, 'Fall', 20,15);
 insert into classes values  ('c0010', 'BIOL', 425, 1, 2020, 'Spring', 20, 15);
 insert into classes values  ('c0011', 'SOM', 100, 1, 2019, 'Fall', 20, 15);
 insert into classes values  ('c0012', 'SOM', 100, 2, 2019, 'Fall', 20, 15);
+<<<<<<< HEAD
 insert into classes values  ('c0013', 'SOM', 200, 1, 2020, 'Spring', 20, 20);
 insert into classes values  ('c0014', 'SOM' ,300,1, 2020, 'Fall', 20, 20);
 insert into classes values ('c0015', 'Math' ,221, 1, 2019, 'Fall', 20, 20);
+=======
+insert into classes values  ('c0013', 'SOM', 200, 1, 2020, 'Spring', 20, 18);
+insert into classes values  ('c0014', 'SOM' ,300,1, 2020, 'Fall', 20, 17);
+insert into classes values ('c0015', 'Math' ,221, 1, 2019, 'Fall', 20, 19);
+>>>>>>> 24ac6c79d347c677cf5eb02bcda9a660d0b72a4a
 insert into classes values ('c0016', 'Math' ,222, 1, 2020, 'Spring', 20, 20);
 insert into classes values ('c0017', 'Math' ,222, 2, 2020, 'Spring', 20, 20);
 insert into classes values ('c0018', 'Math' ,314, 1, 2020, 'Fall', 20, 20);
@@ -98,6 +104,10 @@ insert into enrollments values  ('B007', 'c0015', 'C');
 insert into enrollments values  ('B007', 'c0017', 'A');
 insert into enrollments values  ('B007', 'c0018', 'B');
 insert into enrollments values  ('B007', 'c0019', 'B');
+<<<<<<< HEAD
 
 
+=======
+insert into enrollments values('B008', 'c0002', 'D');
+>>>>>>> 24ac6c79d347c677cf5eb02bcda9a660d0b72a4a
 
