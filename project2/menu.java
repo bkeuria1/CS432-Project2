@@ -22,7 +22,7 @@ public class menu{
 
 	}
 	private void dropStudent(String sid, String classid, Connection conn) throws SQLException{
-                CallableStatement cs = conn.prepareCall("begin  srs.drop_student(?,?,?); end;");
+                CallableStatement cs = conn.prepareCall("begin  srs.drop_student(?,?,?,?); end;");
                 cs.setString(1,sid);
                 cs.setString(2,classid);
 
@@ -83,8 +83,7 @@ public class menu{
 	}
 	private void getStudentInfo(String sid, Connection conn) throws SQLException{
 		CallableStatement cs = conn.prepareCall("begin  srs.get_student_info(?,?,?); end;");
-		cs.setString(1,sid);
-		System.out.println("Getting Student Info");	
+		cs.setString(1,sid);	
 		cs.registerOutParameter(2, OracleTypes.CURSOR);	//register the cursor output	
 		cs.registerOutParameter(3, Types.VARCHAR); //register the error msg, if any
 		cs.execute();		
@@ -95,7 +94,7 @@ public class menu{
 	   		while (rs.next()) {
                                       	System.out.println(rs.getString(1) + "\t" +
                                         rs.getString(2) + "\t" + rs.getString(3) +
-                                        rs.getDouble(4) +
+                                       "\t" + rs.getDouble(4) +
                                         "\t" + rs.getString(5));
                                 }
 		}else{
@@ -118,7 +117,7 @@ public class menu{
 	   		while (rs.next()) {
                                       	System.out.println(rs.getString(1) + "\t" +
                                         rs.getString(2) + "\t" + rs.getString(3) +
-                                        rs.getInt(4) +
+                                        "\t" + rs.getInt(4) +
                                         "\t" + rs.getString(5)
 					+ "\t" + rs.getString(6)  + "\t" + rs.getString(7)  + "\t" + rs.getString(8));
                                 }

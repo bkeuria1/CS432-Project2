@@ -197,11 +197,13 @@ PROCEDURE get_class_info(c_id in classes.classid%type, c1 out sys_refcursor, err
 	IF class_count<1 THEN
 		errMsg:= 'The classid is invalid';
 		dbms_output.put_line(errMsg);
+		return;
 	END IF;
 	
 	IF enrollment_count<1 THEN
 		errMsg := 'No student is enrolled in the class';
 		dbms_output.put_line(errMsg);
+		return;
 	END IF;
 	--join students, enrollments and classes table to get proper tuples
 
@@ -213,6 +215,7 @@ END;
 PROCEDURE get_pre(p_dept_code in prerequisites.dept_code%type,p_course_no in prerequisites.course_no%type, c1 out sys_refcursor) as
 	--we used a hierarchal query to get all direct and indirect prereq course
 	--more can be read here: https://docs.oracle.com/cd/B19306_01/seIver.102/b14200/queries003.htm
+	
 	BEGIN
 		open c1 for select pre_dept_code, pre_course_no from prerequisites  CONNECT BY dept_code = PRIOR pre_dept_code and course_no = PRIOR pre_course_no START WITH course_no = p_course_no and 
 		dept_code = p_dept_code;		
@@ -341,7 +344,7 @@ PROCEDURE enroll_student(p_sid in students.sid%type, p_classid in classes.classi
                        dbms_output.put_line(errMsg);
                        return;
                 END IF;
-		errMsg := 'Prequitisite course have not been completed';
+--		errMsg := 'Prequitisite course have not been completed';
 		--get semester ,year, class size, and limit of the class
 		 select semester into class_semester from classes where classid = p_classid;
                  select year into class_year from classes where classid = p_classid;
@@ -386,6 +389,7 @@ PROCEDURE enroll_student(p_sid in students.sid%type, p_classid in classes.classi
 			select count(*) into pre_req_enrolled from classes c, enrollments e where c.classid = e.classid and e.sid = p_sid and i.pre_dept_code = c.dept_code and i.pre_course_no = c.course_no;
 			dbms_output.put_line(pre_req_enrolled);
 			if pre_req_enrolled = 0 THEN
+				 errMsg := 'Prequitisite course have not been completed';
                                 dbms_output.put_line(errMsg);
 				return;
 			END IF;
@@ -393,6 +397,7 @@ PROCEDURE enroll_student(p_sid in students.sid%type, p_classid in classes.classi
                     	select lgrade into pre_req_grade from classes c, enrollments e where c.classid = e.classid and e.sid = p_sid and i.pre_dept_code = c.dept_code and i.pre_course_no = c.course_no;
 			--check to see student made prereq grade requirements
 			if pre_req_grade > 'C' or pre_req_grade is NULL then
+				 errMsg := 'Prequitisite course have not been completed';
 				dbms_output.put_line(errMsg);
 				return;
 			END if;
